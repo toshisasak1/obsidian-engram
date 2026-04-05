@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 # Schema version history
 # ---------------------------------------------------------------------------
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 
 _SCHEMA_V1 = """
 CREATE TABLE IF NOT EXISTS schema_migrations (
@@ -122,6 +122,19 @@ CREATE TABLE IF NOT EXISTS entry_embeddings (
 );
 """
 
+_SCHEMA_V2 = """
+CREATE TABLE IF NOT EXISTS entry_tags (
+    entry_id   TEXT NOT NULL REFERENCES entries(entry_id) ON DELETE CASCADE,
+    tag        TEXT NOT NULL,
+    method     TEXT NOT NULL DEFAULT 'keyword',
+    tagged_at  TEXT NOT NULL,
+    PRIMARY KEY (entry_id, tag)
+);
+
+CREATE INDEX IF NOT EXISTS idx_entry_tags_tag ON entry_tags(tag);
+CREATE INDEX IF NOT EXISTS idx_entry_tags_method ON entry_tags(method);
+"""
+
 _VEC0_DDL_TEMPLATE = """
 CREATE VIRTUAL TABLE IF NOT EXISTS entry_vec USING vec0(
     entry_id TEXT PRIMARY KEY,
@@ -156,6 +169,7 @@ def ensure_schema(conn: sqlite3.Connection) -> None:
     conn.executescript(_SCHEMA_V1)
     _record_migration(conn, 1)
     ensure_fts(conn)
+    _migrate_v2(conn)
     logger.debug("Schema ensured at version %d", SCHEMA_VERSION)
 
 
@@ -372,6 +386,88 @@ def update_source_file(
     conn.commit()
 
 
+# -- Tag CRUD ---------------------------------------------------------------
+
+
+def upsert_tags(
+    conn: sqlite3.Connection,
+    entry_id: str,
+    tags: list[str],
+    method: str = "keyword",
+) -> None:
+    """Insert tags for an entry, ignoring duplicates."""
+    if not tags:
+        return
+    now = _now_iso()
+    conn.executemany(
+        """
+        INSERT INTO entry_tags (entry_id, tag, method, tagged_at)
+        VALUES (?, ?, ?, ?)
+        ON CONFLICT(entry_id, tag) DO UPDATE SET
+            method    = excluded.method,
+            tagged_at = excluded.tagged_at
+        """,
+        [(entry_id, t.lower().strip(), method, now) for t in tags if t.strip()],
+    )
+    conn.commit()
+
+
+def get_tags_for_entry(conn: sqlite3.Connection, entry_id: str) -> list[str]:
+    """Return all tags for a given entry."""
+    rows = conn.execute(
+        "SELECT tag FROM entry_tags WHERE entry_id = ? ORDER BY tag",
+        (entry_id,),
+    ).fetchall()
+    return [row["tag"] for row in rows]
+
+
+def get_all_tags(conn: sqlite3.Connection) -> list[dict]:
+    """Return all unique tags with counts."""
+    rows = conn.execute(
+        "SELECT tag, COUNT(*) AS cnt FROM entry_tags GROUP BY tag ORDER BY cnt DESC"
+    ).fetchall()
+    return [{"tag": row["tag"], "count": row["cnt"]} for row in rows]
+
+
+def delete_tags_for_entry(conn: sqlite3.Connection, entry_id: str) -> int:
+    """Delete all tags for an entry. Returns count of deleted rows."""
+    cur = conn.execute(
+        "DELETE FROM entry_tags WHERE entry_id = ?", (entry_id,)
+    )
+    conn.commit()
+    return cur.rowcount
+
+
+def get_untagged_entry_ids(
+    conn: sqlite3.Connection,
+    method: str | None = None,
+    limit: int = 100,
+) -> list[dict]:
+    """Return entries that have no tags (or no tags from a specific method).
+
+    Returns dicts with entry_id, text, source_app, role, source_path.
+    """
+    if method:
+        sql = """
+            SELECT e.entry_id, e.text, e.source_app, e.role, e.source_path
+            FROM entries e
+            LEFT JOIN entry_tags t ON e.entry_id = t.entry_id AND t.method = ?
+            WHERE t.entry_id IS NULL AND length(e.text) > 10
+            LIMIT ?
+        """
+        rows = conn.execute(sql, (method, limit)).fetchall()
+    else:
+        sql = """
+            SELECT e.entry_id, e.text, e.source_app, e.role, e.source_path
+            FROM entries e
+            LEFT JOIN entry_tags t ON e.entry_id = t.entry_id
+            WHERE t.entry_id IS NULL AND length(e.text) > 10
+            LIMIT ?
+        """
+        rows = conn.execute(sql, (limit,)).fetchall()
+    return [dict(row) for row in rows]
+
+
 # -- Stats ------------------------------------------------------------------
 
 
@@ -391,6 +487,7 @@ def get_stats(conn: sqlite3.Connection) -> dict:
         "source_files": _count("source_files"),
         "fts_rows": _count("entries_fts"),
         "embeddings": _count("entry_embeddings"),
+        "tagged_entries": _count("entry_tags"),
         "schema_version": _current_version(conn),
     }
 
@@ -422,6 +519,15 @@ def _record_migration(conn: sqlite3.Connection, version: int) -> None:
         (version, _now_iso()),
     )
     conn.commit()
+
+
+def _migrate_v2(conn: sqlite3.Connection) -> None:
+    """Apply schema V2: entry_tags table for tagging support."""
+    if _current_version(conn) >= 2:
+        return
+    conn.executescript(_SCHEMA_V2)
+    _record_migration(conn, 2)
+    logger.debug("Migrated to schema V2 (entry_tags)")
 
 
 def rebuild_fts(conn: sqlite3.Connection) -> None:

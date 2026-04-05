@@ -72,7 +72,7 @@ def search(
     source_app:
         Optional filter -- only return entries from this source application.
     tags:
-        Reserved for future tag-based filtering (currently unused).
+        Comma-separated tag names for filtering (OR match).
 
     Returns
     -------
@@ -111,12 +111,19 @@ def search(
     # -- Step 4: Time decay -----------------------------------------------
     decayed = _apply_time_decay(fused, config.half_life_days)
 
+    # -- Step 4b: Tag filtering (if requested) -----------------------------
+    if tags:
+        tag_list = [t.strip().lower() for t in tags.split(",") if t.strip()]
+        if tag_list:
+            decayed = _filter_by_tags(conn, decayed, tag_list)
+
     # -- Step 5: Build SearchResult objects --------------------------------
     results: list[SearchResult] = []
     for item in decayed[:limit]:
         snippet = item.get("snippet") or build_snippet(
             item.get("text", ""), query
         )
+        entry_tags = _get_entry_tags(conn, item["entry_id"])
         results.append(
             SearchResult(
                 entry_id=item["entry_id"],
@@ -133,6 +140,7 @@ def search(
                 fts_rank=item.get("fts_rank"),
                 vector_rank=item.get("vector_rank"),
                 decay_multiplier=item.get("decay_multiplier", 1.0),
+                tags=entry_tags,
             )
         )
     return results
@@ -593,3 +601,47 @@ def build_snippet(text: str, query: str, context_chars: int = 150) -> str:
     if len(text) <= context_chars:
         return text
     return text[:context_chars] + "..."
+
+
+# ---------------------------------------------------------------------------
+# Tag helpers
+# ---------------------------------------------------------------------------
+
+
+def _filter_by_tags(
+    conn: sqlite3.Connection,
+    results: list[dict[str, Any]],
+    tag_list: list[str],
+) -> list[dict[str, Any]]:
+    """Keep only results whose entry_id has at least one of the given tags."""
+    if not results or not tag_list:
+        return results
+
+    entry_ids = [r["entry_id"] for r in results]
+    placeholders = ",".join("?" * len(tag_list))
+    id_placeholders = ",".join("?" * len(entry_ids))
+
+    try:
+        rows = conn.execute(
+            f"SELECT DISTINCT entry_id FROM entry_tags "
+            f"WHERE tag IN ({placeholders}) AND entry_id IN ({id_placeholders})",
+            [*tag_list, *entry_ids],
+        ).fetchall()
+        matched = {row["entry_id"] for row in rows}
+    except sqlite3.OperationalError:
+        # entry_tags table may not exist yet
+        return results
+
+    return [r for r in results if r["entry_id"] in matched]
+
+
+def _get_entry_tags(conn: sqlite3.Connection, entry_id: str) -> list[str]:
+    """Fetch tags for a single entry. Returns empty list on error."""
+    try:
+        rows = conn.execute(
+            "SELECT tag FROM entry_tags WHERE entry_id = ? ORDER BY tag",
+            (entry_id,),
+        ).fetchall()
+        return [row["tag"] for row in rows]
+    except sqlite3.OperationalError:
+        return []

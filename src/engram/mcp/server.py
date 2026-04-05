@@ -57,6 +57,13 @@ TOOLS: list[dict[str, Any]] = [
                         "Filter by source: claude, codex, gemini, vault"
                     ),
                 },
+                "tags": {
+                    "type": "string",
+                    "description": (
+                        "Comma-separated tags to filter results "
+                        "(e.g. 'python,trading')"
+                    ),
+                },
             },
             "required": ["query"],
         },
@@ -92,6 +99,31 @@ TOOLS: list[dict[str, Any]] = [
             "embeddings, by source app."
         ),
         "inputSchema": {"type": "object", "properties": {}},
+    },
+    {
+        "name": "memory_tag",
+        "description": (
+            "Tag untagged entries in the database using keyword rules "
+            "and/or CLI-based AI tagging. Tags enable filtered search."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "provider": {
+                    "type": "string",
+                    "enum": ["keyword", "cli", "both"],
+                    "description": (
+                        "Tagging method: keyword (rule-based), cli (AI via "
+                        "claude/codex), both. Default: from config."
+                    ),
+                },
+                "batch_size": {
+                    "type": "integer",
+                    "description": "Max entries to process",
+                    "default": 50,
+                },
+            },
+        },
     },
     {
         "name": "memory_list_sessions",
@@ -228,6 +260,7 @@ def _handle_memory_search(
     query = args.get("query", "")
     limit = args.get("limit", 10)
     source_app = args.get("source_app")
+    tags = args.get("tags")
 
     results = search(
         conn,
@@ -236,6 +269,7 @@ def _handle_memory_search(
         embedding_config=config.embedding if config.embedding.enabled else None,
         limit=limit,
         source_app=source_app,
+        tags=tags,
     )
 
     lines: list[str] = []
@@ -303,6 +337,28 @@ def _handle_memory_status(
     return [{"type": "text", "text": text}]
 
 
+def _handle_memory_tag(
+    conn: sqlite3.Connection,
+    config: EngramConfig,
+    args: dict[str, Any],
+) -> list[dict[str, Any]]:
+    """Execute memory_tag to tag untagged entries."""
+    from engram.tagging import TagEngine
+
+    provider = args.get("provider")
+    batch_size = args.get("batch_size")
+
+    engine = TagEngine(config)
+    stats = engine.tag_untagged(provider=provider, batch_size=batch_size)
+
+    text = (
+        f"Tagging complete: {stats.processed} processed, "
+        f"{stats.tagged} tagged, {stats.skipped} skipped, "
+        f"{stats.errors} errors"
+    )
+    return [{"type": "text", "text": text}]
+
+
 def _handle_memory_list_sessions(
     conn: sqlite3.Connection,
     config: EngramConfig,
@@ -349,6 +405,7 @@ _TOOL_HANDLERS: dict[str, Any] = {
     "memory_search": _handle_memory_search,
     "memory_brief": _handle_memory_brief,
     "memory_status": _handle_memory_status,
+    "memory_tag": _handle_memory_tag,
     "memory_list_sessions": _handle_memory_list_sessions,
 }
 

@@ -258,8 +258,9 @@ def sync(verbose: bool, skip_embeddings: bool, source: str | None) -> None:
 @click.argument("query")
 @click.option("--limit", "-n", default=10, type=int)
 @click.option("--source", type=str, help="Filter by source app")
+@click.option("--tag", type=str, help="Filter by tags (comma-separated)")
 @click.option("--json", "as_json", is_flag=True)
-def search(query: str, limit: int, source: str | None, as_json: bool) -> None:
+def search(query: str, limit: int, source: str | None, tag: str | None, as_json: bool) -> None:
     """Search across all indexed conversations."""
     _setup_logging()
 
@@ -275,6 +276,7 @@ def search(query: str, limit: int, source: str | None, as_json: bool) -> None:
             config=cfg.search,
             limit=limit,
             source_app=source,
+            tags=tag,
         )
     except ImportError:
         click.echo("Error: search module not available.", err=True)
@@ -308,6 +310,42 @@ def search(query: str, limit: int, source: str | None, as_json: bool) -> None:
             title = r.session_title or r.entry_title or ""
             click.echo(f"\n--- {i}. [{r.source_app}] {title} (score: {r.score:.3f}) ---")
             click.echo(r.snippet)
+
+
+# ---------------------------------------------------------------------------
+# engram tag
+# ---------------------------------------------------------------------------
+
+
+@main.command()
+@click.option(
+    "--provider",
+    type=click.Choice(["keyword", "cli", "both"]),
+    default=None,
+    help="Tagging method (default: from config)",
+)
+@click.option("--batch-size", type=int, default=None, help="Max entries to process")
+@click.option("--verbose", "-v", is_flag=True)
+def tag(provider: str | None, batch_size: int | None, verbose: bool) -> None:
+    """Tag untagged entries in the database."""
+    _setup_logging(verbose)
+
+    cfg = _load_config_or_exit()
+
+    try:
+        from engram.tagging import TagEngine
+
+        engine = TagEngine(cfg)
+        stats = engine.tag_untagged(provider=provider, batch_size=batch_size)
+        click.echo(
+            f"Tagging complete: "
+            f"{stats.processed} processed, {stats.tagged} tagged, "
+            f"{stats.skipped} skipped, {stats.errors} errors"
+        )
+    except Exception as exc:
+        click.echo(f"Tagging failed: {exc}", err=True)
+        logger.debug("Tagging traceback:", exc_info=True)
+        sys.exit(1)
 
 
 # ---------------------------------------------------------------------------
@@ -406,6 +444,7 @@ def status(as_json: bool) -> None:
             click.echo(f"Entries:    {stats['entries']}")
             click.echo(f"FTS rows:   {stats['fts_rows']}")
             click.echo(f"Embeddings: {stats['embeddings']}")
+            click.echo(f"Tagged:     {stats['tagged_entries']}")
             click.echo(f"Src files:  {stats['source_files']}")
             if stats["sources"]:
                 click.echo("Sources:")

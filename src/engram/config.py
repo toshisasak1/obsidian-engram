@@ -97,6 +97,19 @@ class SyncConfig:
 
 
 @dataclass
+class TaggingConfig:
+    """Auto-tagging configuration."""
+
+    enabled: bool = False
+    provider: str = "keyword"  # "keyword", "cli", "both"
+    batch_size: int = 50
+    max_tags: int = 5
+    cli_command: str = "claude"  # "claude" or "codex"
+    cli_timeout: int = 120  # seconds per batch
+    custom_rules: dict[str, list[str]] = field(default_factory=dict)
+
+
+@dataclass
 class VaultConfig:
     """Obsidian vault knowledge ingestion settings."""
 
@@ -121,6 +134,7 @@ class EngramConfig:
     search: SearchConfig = field(default_factory=SearchConfig)
     embedding: EmbeddingConfig = field(default_factory=EmbeddingConfig)
     sync: SyncConfig = field(default_factory=SyncConfig)
+    tagging: TaggingConfig = field(default_factory=TaggingConfig)
     vault_knowledge: VaultConfig = field(default_factory=VaultConfig)
 
 
@@ -210,6 +224,20 @@ def _hydrate_config(raw: dict[str, Any], vault_path: Path | None = None) -> Engr
         cfg.embedding = _hydrate_flat_dataclass(EmbeddingConfig, raw["embedding"])
     if "sync" in raw and isinstance(raw["sync"], dict):
         cfg.sync = _hydrate_flat_dataclass(SyncConfig, raw["sync"])
+    if "tagging" in raw and isinstance(raw["tagging"], dict):
+        tagging_raw = raw["tagging"]
+        # Extract nested sections before flat hydration
+        custom_rules = tagging_raw.pop("rules", {})
+        cli_section = tagging_raw.pop("cli", {})
+        if cli_section:
+            if "command" in cli_section:
+                tagging_raw.setdefault("cli_command", cli_section["command"])
+            if "timeout" in cli_section:
+                tagging_raw.setdefault("cli_timeout", cli_section["timeout"])
+        cfg.tagging = _hydrate_flat_dataclass(TaggingConfig, tagging_raw)
+        if custom_rules and isinstance(custom_rules, dict):
+            cfg.tagging.custom_rules = custom_rules
+
     if "vault_knowledge" in raw and isinstance(raw["vault_knowledge"], dict):
         vk = raw["vault_knowledge"]
         cfg.vault_knowledge = VaultConfig(
@@ -403,6 +431,26 @@ def generate_config_toml(config: EngramConfig) -> str:
         "[sync]",
         f"poll_interval_seconds = {config.sync.poll_interval_seconds}",
         f"settle_seconds = {config.sync.settle_seconds}",
+        "",
+    ])
+
+    # -- tagging ---------------------------------------------------------
+    lines.extend([
+        "# Auto-tagging. Assign tags to entries for filtered search.",
+        '# provider: "keyword" (rule-based), "cli" (claude/codex), "both".',
+        "[tagging]",
+        f"enabled = {_toml_bool(config.tagging.enabled)}",
+        f'provider = "{config.tagging.provider}"',
+        f"batch_size = {config.tagging.batch_size}",
+        f"max_tags = {config.tagging.max_tags}",
+        "",
+        "[tagging.cli]",
+        f'command = "{config.tagging.cli_command}"',
+        f"timeout = {config.tagging.cli_timeout}",
+        "",
+        "# [tagging.rules]",
+        "# python = [\"python\", \"pip\", \"venv\", \"pytest\"]",
+        "# trading = [\"forex\", \"gmma\", \"ema\", \"bot\"]",
         "",
     ])
 

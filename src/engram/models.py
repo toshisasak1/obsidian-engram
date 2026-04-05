@@ -56,6 +56,7 @@ class SearchResult:
     fts_rank: int | None = None
     vector_rank: int | None = None
     decay_multiplier: float = 1.0
+    tags: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -66,4 +67,14 @@ class SyncStats:
     indexed: int = 0
     skipped: int = 0
     embedded: int = 0
+    errors: int = 0
+
+
+@dataclass
+class TagStats:
+    """Counters accumulated during a tagging run."""
+
+    processed: int = 0
+    tagged: int = 0
+    skipped: int = 0
     errors: int = 0
