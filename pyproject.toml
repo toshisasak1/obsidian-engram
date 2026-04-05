@@ -51,9 +51,9 @@ engram = "engram.cli:main"
 # my_source = "my_package.parser:MyParser"
 
 [project.urls]
-Homepage = "https://github.com/toshi/obsidian-engram"
-Repository = "https://github.com/toshi/obsidian-engram"
-Issues = "https://github.com/toshi/obsidian-engram/issues"
+Homepage = "https://github.com/toshisasak1/obsidian-engram"
+Repository = "https://github.com/toshisasak1/obsidian-engram"
+Issues = "https://github.com/toshisasak1/obsidian-engram/issues"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/engram"]

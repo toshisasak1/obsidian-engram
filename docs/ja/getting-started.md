@@ -44,7 +44,7 @@ pip install obsidian-engram[openai]
 ### 開発用インストール
 
 ```bash
-git clone https://github.com/toshi/obsidian-engram.git
+git clone https://github.com/toshisasak1/obsidian-engram.git
 cd obsidian-engram
 pip install -e ".[dev,embeddings]"
 ```
@@ -75,18 +75,18 @@ engram init
 $ cd ~/my-vault
 $ engram init
 
-Detected Obsidian vault: /home/toshi/my-vault
+Detected Obsidian vault: /home/you/my-vault
 Discovered AI tool sources: claude, codex, gemini
 
 This will:
-  - Create .engram/ directory in /home/toshi/my-vault
-  - Initialize database at /home/toshi/my-vault/.engram/engram.db
-  - Copy template files to /home/toshi/my-vault
+  - Create .engram/ directory in /home/you/my-vault
+  - Initialize database at /home/you/my-vault/.engram/engram.db
+  - Copy template files to /home/you/my-vault
   - Run initial sync of 3 source(s)
 
 Proceed? [Y/n]: y
 
-Created /home/toshi/my-vault/.engram/config.toml
+Created /home/you/my-vault/.engram/config.toml
   Created SOUL.md
   Created USER.md
   Created AGENTS.md
@@ -260,8 +260,8 @@ engram status
 出力例:
 
 ```
-Database:   /home/toshi/my-vault/.engram/engram.db
-Vault:      /home/toshi/my-vault
+Database:   /home/you/my-vault/.engram/engram.db
+Vault:      /home/you/my-vault
 Schema:     v1
 Sessions:   45
 Entries:    1234
@@ -365,6 +365,7 @@ python -c "import sqlite3; c = sqlite3.connect(':memory:'); c.execute(\"CREATE V
 ## 次のステップ
 
 - [設定リファレンス](./configuration.md) -- `config.toml` の全オプション解説
+- [自動タグ付け](./tagging.md) -- キーワードルールまたは AI CLI によるタグ付け
 - [検索アルゴリズム解説](./search.md) -- ハイブリッド検索の仕組み
 - [MCP連携ガイド](./mcp.md) -- AI ツールとの統合方法
 - [アイデンティティフレームワーク](./identity.md) -- SOUL.md 等の活用法

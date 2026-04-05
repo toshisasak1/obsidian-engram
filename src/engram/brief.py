@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 # Directories that are too generic to be useful workspace identifiers.
 _SKIP_COMPONENTS = frozenset({
-    "users", "home", "toshi", "dropbox", "obsidian", "mnt",
+    "users", "home", "mnt",
     "documents", "desktop", "projects", "src", "c:", "d:", "e:",
     "volumes", "var", "tmp", "opt", "usr", "lib",
 })

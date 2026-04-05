@@ -273,6 +273,7 @@ engram brief --output context.md
 ## Next steps
 
 - **[Configuration Reference](configuration.md)** -- customize search tuning, sources, and embeddings.
+- **[Auto-Tagging](tagging.md)** -- tag entries with keyword rules or AI-powered CLI tagging.
 - **[MCP Integration Guide](mcp.md)** -- connect Engram to Claude Code, Codex, or any MCP client.
 - **[Search Algorithm](search.md)** -- understand how FTS5, vector search, RRF fusion, and time decay work together.
 - **[Identity Framework](identity.md)** -- set up SOUL.md, USER.md, AGENTS.md, and TOOLS.md.

@@ -227,7 +227,7 @@ def test_extract_project_from_path():
         "/home/user/.claude/projects/obsidian-engram/session.jsonl"
     ) == "obsidian-engram"
     assert _extract_project_from_path(
-        "C:\\Users\\toshi\\.claude\\projects\\my-app\\session.jsonl"
+        "C:\\Users\\user\\.claude\\projects\\my-app\\session.jsonl"
     ) == "my-app"
     assert _extract_project_from_path("") == ""
 

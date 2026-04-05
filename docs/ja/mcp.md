@@ -6,7 +6,7 @@ MCP (Model Context Protocol) は AI ツールがローカルのサービスと�
 
 - **プロトコル**: MCP 2024-11-05 (JSON-RPC 2.0 / Content-Length フレーミング)
 - **トランスポート**: stdio (標準入出力)
-- **ツール数**: 4つ
+- **ツール数**: 5つ
 - **認証**: なし (ローカル実行のみ)
 - **ログ**: stderr に出力 (stdout は MCP 通信専用)
 
@@ -69,7 +69,7 @@ MCP サーバーは起動時にカレントディレクトリから Vault を検
       "command": "engram",
       "args": ["mcp"],
       "env": {
-        "ENGRAM_VAULT_PATH": "/home/toshi/my-vault"
+        "ENGRAM_VAULT_PATH": "/home/you/my-vault"
       }
     }
   }
@@ -84,7 +84,7 @@ MCP サーバーは起動時にカレントディレクトリから Vault を検
 {
   "mcpServers": {
     "engram": {
-      "command": "/home/toshi/.venvs/engram/bin/engram",
+      "command": "/home/you/.venvs/engram/bin/engram",
       "args": ["mcp"]
     }
   }
@@ -97,7 +97,7 @@ Windows の場合:
 {
   "mcpServers": {
     "engram": {
-      "command": "C:\\Users\\toshi\\.venvs\\engram\\Scripts\\engram.exe",
+      "command": "C:\\Users\\you\\.venvs\\engram\\Scripts\\engram.exe",
       "args": ["mcp"]
     }
   }
@@ -111,14 +111,14 @@ Windows の場合:
 ```bash
 # engram のパスを確認
 which engram
-# /home/toshi/.local/bin/engram
+# /home/you/.local/bin/engram
 ```
 
 ```json
 {
   "mcpServers": {
     "engram": {
-      "command": "/home/toshi/.local/bin/engram",
+      "command": "/home/you/.local/bin/engram",
       "args": ["mcp"]
     }
   }
@@ -151,6 +151,10 @@ which engram
     "source_app": {
       "type": "string",
       "description": "ソースフィルタ: claude, codex, gemini, vault"
+    },
+    "tags": {
+      "type": "string",
+      "description": "カンマ区切りのタグフィルタ (例: 'python,trading')"
     }
   },
   "required": ["query"]
@@ -223,7 +227,7 @@ AI: (memory_search を呼び出し)
 ```
 ユーザー: 「このプロジェクトの経緯を教えて」
 AI: (memory_brief を呼び出し)
-     workspace: "/home/toshi/projects/api-gateway"
+     workspace: "/home/you/projects/api-gateway"
 ```
 
 **出力フォーマット**:
@@ -232,14 +236,14 @@ AI: (memory_brief を呼び出し)
 # Session Memory Brief
 
 Generated: 2026-04-05T10:00:00+00:00
-Workspace: /home/toshi/projects/api-gateway
+Workspace: /home/you/projects/api-gateway
 
 ## Recent Sessions
 
 ### [claude] APIゲートウェイ認証の実装
 - Session: claude:session-abc123
 - Updated: 2026-04-04T15:00:00+00:00
-- CWD: /home/toshi/projects/api-gateway
+- CWD: /home/you/projects/api-gateway
 
 > OAuth 2.0のPKCEフローを使用して認証を実装。
 > フロントエンドのリクエスト処理を修正。
@@ -247,7 +251,7 @@ Workspace: /home/toshi/projects/api-gateway
 ### [codex] エンドポイントのテスト追加
 - Session: codex:session-def456
 - Updated: 2026-04-03T09:00:00+00:00
-- CWD: /home/toshi/projects/api-gateway
+- CWD: /home/you/projects/api-gateway
 
 > pytest-asyncioを使用した非同期テストの追加。
 
@@ -264,6 +268,38 @@ Workspace: /home/toshi/projects/api-gateway
 3. セッションの `title`, `project`, `source_path` とキーワードマッチ
 4. マッチしたセッションの最新N件を返す
 5. ワークスペースのキーワードと追加クエリで FTS 検索
+
+---
+
+### `memory_tag`
+
+データベース内の未タグエントリにタグを付与します。キーワードルールおよび/またはAI CLIツールを使用します。
+
+**入力スキーマ**:
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "provider": {
+      "type": "string",
+      "enum": ["keyword", "cli", "both"],
+      "description": "タグ付け方法 (デフォルト: 設定値)"
+    },
+    "batch_size": {
+      "type": "integer",
+      "description": "処理する最大エントリ数",
+      "default": 50
+    }
+  }
+}
+```
+
+**出力**: タグ付け実行の結果サマリー (処理数、タグ付け数、スキップ数、エラー数)
+
+**使用シーン**:
+- フィルタ検索 (`memory_search` の `tags` パラメータ) の前にエントリがタグ付け済みであることを確認
+- 定期的なメンテナンス操作として実行
 
 ---
 
@@ -295,8 +331,8 @@ Workspace: /home/toshi/projects/api-gateway
     "codex": 12,
     "vault": 5
   },
-  "db_path": "/home/toshi/my-vault/.engram/engram.db",
-  "vault_path": "/home/toshi/my-vault"
+  "db_path": "/home/you/my-vault/.engram/engram.db",
+  "vault_path": "/home/you/my-vault"
 }
 ```
 
@@ -335,15 +371,15 @@ Workspace: /home/toshi/projects/api-gateway
 ```markdown
 - **[claude]** APIゲートウェイ認証の実装
   - Updated: 2026-04-04T15:00:00+00:00
-  - CWD: /home/toshi/projects/api-gateway
+  - CWD: /home/you/projects/api-gateway
   - Key: claude:session-abc123
 - **[codex]** データベースマイグレーション
   - Updated: 2026-04-03T09:00:00+00:00
-  - CWD: /home/toshi/projects/backend
+  - CWD: /home/you/projects/backend
   - Key: codex:session-def456
 - **[vault]** インフラ設計メモ
   - Updated: 2026-04-02T12:00:00+00:00
-  - Key: vault:/home/toshi/my-vault/infra-design.md
+  - Key: vault:/home/you/my-vault/infra-design.md
 ```
 
 **使用シーン**:
@@ -550,5 +586,5 @@ MCP サーバーは AI ツールの子プロセスとして起動されます。
 | `initialize` | サーバー情報とケイパビリティを返す |
 | `notifications/initialized` | 無視 (通知) |
 | `ping` | 空のレスポンスを返す |
-| `tools/list` | 4つのツール定義を返す |
+| `tools/list` | 5つのツール定義を返す |
 | `tools/call` | ツールを実行して結果を返す |

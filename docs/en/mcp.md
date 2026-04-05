@@ -60,7 +60,7 @@ Add to `~/.claude/settings.json` (global) or `.claude/settings.json` (per-projec
 }
 ```
 
-After saving, start a new Claude Code session. You should see Engram's four tools available. You can verify by asking Claude to run `memory_status`.
+After saving, start a new Claude Code session. You should see Engram's five tools available. You can verify by asking Claude to run `memory_status`.
 
 **Tip**: If you installed Engram in a virtual environment, use the full path to the `engram` binary:
 
@@ -105,7 +105,7 @@ Any tool that supports the MCP stdio transport can use Engram. The essential con
 
 ## MCP tools reference
 
-Engram exposes four tools. Below is the complete specification for each.
+Engram exposes five tools. Below is the complete specification for each.
 
 ### `memory_search`
 
@@ -129,6 +129,10 @@ Search across all indexed AI conversation history and vault documents.
     "source_app": {
       "type": "string",
       "description": "Filter by source: claude, codex, gemini, vault"
+    },
+    "tags": {
+      "type": "string",
+      "description": "Comma-separated tags to filter results (e.g. 'python,trading')"
     }
   },
   "required": ["query"]
@@ -225,6 +229,34 @@ Show knowledge base statistics.
   "vault_path": "/home/you/my-vault"
 }
 ```
+
+### `memory_tag`
+
+Tag untagged entries in the database using keyword rules and/or AI CLI tools.
+
+**Input schema**:
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "provider": {
+      "type": "string",
+      "enum": ["keyword", "cli", "both"],
+      "description": "Tagging method (default: from config)"
+    },
+    "batch_size": {
+      "type": "integer",
+      "description": "Maximum entries to process",
+      "default": 50
+    }
+  }
+}
+```
+
+**Output**: A summary of the tagging run with counts of processed, tagged, skipped, and errored entries.
+
+**When to use**: Before a filtered search (`memory_search` with `tags`) to ensure entries are tagged. Also useful as a periodic maintenance operation.
 
 ### `memory_list_sessions`
 

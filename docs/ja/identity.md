@@ -50,7 +50,7 @@ python -c "from engram.identity import TEMPLATE_DIR; print(TEMPLATE_DIR)"
 from pathlib import Path
 from engram.identity import install_identity_files, check_identity_files
 
-vault = Path("/home/toshi/my-vault")
+vault = Path("/home/you/my-vault")
 
 # どのファイルが存在するか確認
 status = check_identity_files(vault)
@@ -192,7 +192,7 @@ engram がインストールされていれば、`memory_search` と `memory_bri
 
 ## 基本情報
 
-- 名前: toshi
+- 名前: your-name
 - タイムゾーン: JST (UTC+9)
 - 言語: 日本語 (主), 英語 (技術文書)
 
@@ -387,7 +387,7 @@ AI アシスタントがセッション開始時に実行すべきチェック�
 ## ネットワーク
 
 - Tailscale VPN: tailnet 内で WSL2 にアクセス可能
-- WSL2 IP: 100.116.53.96
+- WSL2 IP: 100.x.y.z
 
 ## 制約事項
 
