@@ -1,0 +1,4 @@
+{"type":"user","message":{"role":"user","content":[{"type":"text","text":"What is the capital of France?"}]},"uuid":"msg-001","sessionId":"test-session-1","cwd":"/home/user/project","timestamp":"2026-04-01T10:00:00Z"}
+{"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"The capital of France is Paris."}],"model":"claude-sonnet-4-5"},"uuid":"msg-002","sessionId":"test-session-1","timestamp":"2026-04-01T10:00:05Z"}
+{"type":"user","message":{"role":"user","content":"How about Germany?"},"uuid":"msg-003","sessionId":"test-session-1","cwd":"/home/user/project","timestamp":"2026-04-01T10:01:00Z"}
+{"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"The capital of Germany is Berlin."}],"model":"claude-sonnet-4-5"},"uuid":"msg-004","sessionId":"test-session-1","timestamp":"2026-04-01T10:01:05Z"}

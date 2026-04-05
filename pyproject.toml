@@ -1,0 +1,78 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "obsidian-engram"
+version = "0.1.0"
+description = "Give AI tools persistent memory. Hybrid search (FTS5 + vector) across all your AI conversations, integrated with Obsidian."
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.10"
+authors = [{ name = "toshi" }]
+keywords = ["obsidian", "claude", "codex", "gemini", "memory", "ai", "mcp", "search"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Libraries",
+    "Topic :: Text Processing :: Indexing",
+]
+dependencies = [
+    "click>=8.0",
+    "tomli>=1.0;python_version<'3.11'",
+]
+
+[project.optional-dependencies]
+embeddings = [
+    "sentence-transformers>=2.0",
+    "sqlite-vec>=0.1.0",
+    "numpy>=1.24",
+]
+openai = ["openai>=1.0"]
+dev = [
+    "pytest>=7.0",
+    "pytest-cov",
+    "mypy",
+    "ruff",
+]
+
+[project.scripts]
+engram = "engram.cli:main"
+
+[project.entry-points."engram.parsers"]
+# Third-party parsers can register here:
+# my_source = "my_package.parser:MyParser"
+
+[project.urls]
+Homepage = "https://github.com/toshi/obsidian-engram"
+Repository = "https://github.com/toshi/obsidian-engram"
+Issues = "https://github.com/toshi/obsidian-engram/issues"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/engram"]
+
+[tool.ruff]
+target-version = "py310"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "SIM"]
+
+[tool.mypy]
+python_version = "3.10"
+warn_unused_configs = true
+disallow_untyped_defs = true
+warn_unused_ignores = false
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+]
