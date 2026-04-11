@@ -81,7 +81,11 @@ def _get_conn(cfg: EngramConfig) -> sqlite3.Connection:
 @click.version_option(version=__version__)
 def main() -> None:
     """Engram - Persistent memory for AI tools."""
-    pass
+    # Ensure UTF-8 output on Windows (cp932 cannot encode many CJK characters).
+    if sys.platform == "win32":
+        for stream in (sys.stdout, sys.stderr):
+            if hasattr(stream, "reconfigure"):
+                stream.reconfigure(encoding="utf-8", errors="replace")
 
 
 # ---------------------------------------------------------------------------
