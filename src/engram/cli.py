@@ -24,7 +24,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 # Names of template files to copy during ``engram init`` (vault mode).
-_VAULT_TEMPLATES = ("SOUL.md", "USER.md", "AGENTS.md", "TOOLS.md")
+_VAULT_TEMPLATES = ("SOUL.md", "USER.md", "AGENTS.md", "TOOLS.md", "CLAUDE.md")
 
 
 # ---------------------------------------------------------------------------
@@ -170,6 +170,13 @@ def init(vault: str | None, no_vault: bool, yes: bool) -> None:
                     click.echo(f"  Skipped {dst.name} (already exists)")
         else:
             logger.debug("vault_template directory not found at %s", template_dir)
+
+        # -- Create _kb/ knowledge base structure --------------------------
+        from engram.identity import install_kb_structure
+
+        kb_created = install_kb_structure(vault_path)
+        for item in kb_created:
+            click.echo(f"  Created {item}")
 
     # -- Load resolved config and create database ------------------------
     resolved_cfg = load_config(vault_path=vault_path)

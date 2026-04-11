@@ -65,8 +65,9 @@ The `init` command does several things in sequence:
 2. **Discovers AI tools.** It probes `~/.claude/projects`, `~/.codex`, and `~/.gemini/antigravity/brain` for directories that exist on your machine.
 3. **Creates `.engram/config.toml`.** This is the project configuration file. Every setting is documented inline.
 4. **Creates the database.** The SQLite file lands at `.engram/engram.db`.
-5. **Copies identity templates.** Four files (`SOUL.md`, `USER.md`, `AGENTS.md`, `TOOLS.md`) are placed in the vault root. See the [Identity Framework](identity.md) guide.
-6. **Runs the first sync.** All discovered sources are immediately indexed.
+5. **Copies identity templates.** Five files (`SOUL.md`, `USER.md`, `AGENTS.md`, `TOOLS.md`, `CLAUDE.md`) are placed in the vault root. See the [Identity Framework](identity.md) guide.
+6. **Creates the knowledge base.** The `_kb/` directory structure is created with `index.md`, `decisions/`, `sessions/`, and `templates/` subdirectories.
+7. **Runs the first sync.** All discovered sources are immediately indexed.
 
 ### Interactive confirmation
 
@@ -116,13 +117,19 @@ my-vault/
   .engram/
     config.toml          # Edit this to tune behavior
     engram.db            # SQLite database
+  _kb/
+    index.md             # Cross-project knowledge base index
+    decisions/           # Strategic decision records
+    sessions/            # Cross-tool discussion logs
+    templates/           # Reusable structure templates
   SOUL.md                # AI identity guidelines
   USER.md                # Your profile for AI context
   AGENTS.md              # Session startup checklist
   TOOLS.md               # Local environment documentation
+  CLAUDE.md              # Claude Code CLI project instructions
 ```
 
-The `.engram/` directory can safely be added to `.gitignore`. The identity files (`SOUL.md`, `USER.md`, `AGENTS.md`, `TOOLS.md`) are intended for version control.
+The `.engram/` directory can safely be added to `.gitignore`. The identity files (`SOUL.md`, `USER.md`, `AGENTS.md`, `TOOLS.md`, `CLAUDE.md`) and the `_kb/` directory are intended for version control.
 
 ## Syncing conversation logs
 

@@ -1,8 +1,8 @@
 # アイデンティティフレームワーク
 
-Engram のアイデンティティフレームワークは、AI アシスタントがセッション間で一貫した振る舞いを保つためのテンプレートファイル群です。`engram init` で Vault ルートにコピーされる 4 つのファイルが、AI にとっての「自己紹介」と「引き継ぎ資料」の役割を果たします。
+Engram のアイデンティティフレームワークは、AI アシスタントがセッション間で一貫した振る舞いを保つためのテンプレートファイル群です。`engram init` で Vault ルートにコピーされるファイル群が、AI にとっての「自己紹介」と「引き継ぎ資料」の役割を果たします。
 
-## 概要
+## ファイル一覧
 
 | ファイル | 目的 | 対象読者 |
 |---------|------|---------|
@@ -10,8 +10,10 @@ Engram のアイデンティティフレームワークは、AI アシスタン�
 | `USER.md` | ユーザー自身のプロフィール | AI アシスタント |
 | `AGENTS.md` | セッション開始時の手順書 | AI アシスタント |
 | `TOOLS.md` | ローカル環境の構成情報 | AI アシスタント |
+| `CLAUDE.md` | Claude Code CLI プロジェクト指示 | Claude Code は `@import` 経由で KB 統合を行う |
+| `_kb/` | 共有ナレッジベース | クロスツール知識が時間経過とともに複合成長 |
 
-これらのファイルは Vault ルートに配置され、AI ツールが Vault のファイルを読み取る際に自動的に参照されます。全てテンプレートから生成されますが、自由に編集・カスタマイズできます。
+これらのファイルはテンプレートから生成されますが、自由に編集・カスタマイズできます。
 
 ## なぜ必要か
 
@@ -22,50 +24,12 @@ AI アシスタントはセッション間で記憶を持ちません。毎回�
 - **セッション開始の効率化**: AI が最初に何を読み、何を確認すべきかが明確になる
 - **環境情報の共有**: OS、インストール済みツール、プロジェクト構成を明示できる
 
-## ファイルの設置
+## AI ツールがこれらのファイルをどのように発見するか
 
-### 自動設置 (engram init)
+Vault 内で動作する AI ツール (Claude Code、Codex CLI など) は、通常、Vault ルート内のトップレベル Markdown ファイルをコンテキストウィンドウの一部として読み取ります。アイデンティティファイルを Vault ルートに配置することで、特別な設定なしに自然に選択されます。
 
-```bash
-cd ~/my-vault
-engram init
-```
+AI ツールが MCP 経由で Engram をサポートしている場合、`memory_brief` ツールはワークスペースのセッション履歴も参照し、静的なアイデンティティファイルを動的なリコールで補完します。
 
-`engram init` は Vault ルートに 4 つのファイルを自動コピーします。既に存在するファイルはスキップされ、上書きされません。
-
-### 手動設置
-
-ファイルが必要だが `engram init` を再実行したくない場合:
-
-```bash
-# テンプレートの場所を確認
-python -c "from engram.identity import TEMPLATE_DIR; print(TEMPLATE_DIR)"
-```
-
-テンプレートは Python パッケージ内の `vault_template/` ディレクトリにあります。
-
-### プログラムからの設置
-
-```python
-from pathlib import Path
-from engram.identity import install_identity_files, check_identity_files
-
-vault = Path("/home/you/my-vault")
-
-# どのファイルが存在するか確認
-status = check_identity_files(vault)
-# {'SOUL.md': True, 'USER.md': False, 'AGENTS.md': True, 'TOOLS.md': False}
-
-# 存在しないファイルのみコピー
-created = install_identity_files(vault)
-# ['USER.md', 'TOOLS.md']
-
-# 全ファイルを強制上書き (注意: カスタマイズ内容が失われる)
-created = install_identity_files(vault, overwrite=True)
-# ['SOUL.md', 'USER.md', 'AGENTS.md', 'TOOLS.md']
-```
-
----
 
 ## SOUL.md -- AI アイデンティティ
 
@@ -405,75 +369,144 @@ AI アシスタントがセッション開始時に実行すべきチェック�
 
 ---
 
+## CLAUDE.md -- Claude Code 統合
+
+このファイルは Claude Code CLI 専用です。`@import` ディレクティブを使って `AGENTS.md` と `_kb/index.md` をセッション開始時に自動ロードし、タスク実行中にナレッジベースをどのように使うかの実行指示を提供します。
+
+### デフォルトテンプレート
+
+テンプレートには以下が含まれます:
+
+- `@AGENTS.md` と `@_kb/index.md` のインポート (Claude Code によって自動ロード)
+- ナレッジベースの航行指示
+- タスク実行の順序 (index 読込 → リンク辿る → 決定確認 → 実行 → ファイルに書き戻し)
+- Filing loop ルール (洞察を vault に書き戻す)
+- Correction loop ルール (ユーザーの訂正時にファイル更新)
+- 自動テンプレート発見 (新しい構造を構築する際に `_kb/templates/` をチェック)
+
+### カスタマイズ
+
+好みの出力言語、コードスタイル、またはプロジェクト固有の実行ルールを追加してください:
+
+```markdown
+## Language
+- Default language: Japanese
+- Code comments and variable names: English
+
+## Output Style
+- Prefer comprehensive analysis over brevity
+- Use headings and tables for structure
+```
+
+---
+
+## _kb/ -- 共有ナレッジベース
+
+`_kb/` ディレクトリはクロスツールナレッジベースで、異なる AI ツール (Cowork、Claude Code、Codex CLI など) 間のコンテキストをブリッジします。Karpathy 風の filing loop パターンに従い、各セッションの出力が次のセッションの入力になります。
+
+### 構造
+
+```
+_kb/
+  index.md       # マスターインデックス -- 自動再構築、軽いポインタのみ
+  decisions/     # 戦略的決定とその理由
+  sessions/      # 他の AI ツールからのディスカッションログ
+  templates/     # 新しい構造構築用の再利用可能パターン
+```
+
+### 仕組み
+
+`index.md` は軽いポインタファイルで、すべてのアクティブプロジェクト、最近の決定、セッションログをリストアップします。AI ツールはセッション開始時にこれを読み、必要に応じてリンクを辿ります。Vault 全体をコンテキストにロードする必要はありません。
+
+3 つのサブディレクトリは異なる目的を果たします:
+
+**decisions/** は重要な選択とその理由を記録します。将来 AI ツールが類似の決定を遭遇したとき、ここをまず確認します。命名規則: `YYYY-MM-DD-topic-slug.md`
+
+**sessions/** はクロスツール discussion ログを保存します。Cowork で戦略について議論してから Claude Code 実装に切り替えるとき、セッションログがギャップをブリッジします。同じ命名規則を使用します。
+
+**templates/** は再利用可能なパターンを保存します。AI ツール が新しい構造を構築するように求められるとき、ここから適用可能なテンプレートを自動確認します。
+
+### Filing loop (複利成長)
+
+コア原則: すべてのセッション作業を vault に書き戻します。書き戻さない知見はセッション間で消失します。書き戻した知見は複利を生みます -- 次のセッションは前のセッションから始まります。
+
+`AGENTS.md` と `CLAUDE.md` には AI ツール がこのループに従うための明示的な指示が含まれます:
+1. セッション開始時に `_kb/index.md` を読む
+2. 関連するコンテキストを使ってタスクを実行
+3. 決定と発見を `_kb/decisions/` に書き戻す
+
+### Correction loop (品質保証)
+
+AI が生成する分析は常に仮説です。Correction loop はエラーが vault に永続するのを防ぎます:
+- ユーザーが情報を訂正したら、即座にファイルを更新
+- `_kb/decisions/` で何が訂正されたか、なぜかを記録
+- 既存の戦略ドキュメントをユーザーの明示的な承認なしに上書きしない
+- 警告絵文字でマークされた項目は未検証 -- 行動する前に確認
+
+---
+
 ## バージョン管理
 
-### 推奨: アイデンティティファイルを Git 管理する
+アイデンティティファイルはバージョン管理に適して設計されています:
 
-```gitignore
-# .gitignore
-.engram/            # データベースは除外
-!SOUL.md            # アイデンティティファイルは含める
-!USER.md
-!AGENTS.md
-!TOOLS.md
+```bash
+git add SOUL.md USER.md AGENTS.md TOOLS.md CLAUDE.md _kb/
+git commit -m "Add Engram identity files and knowledge base"
 ```
 
-アイデンティティファイルをバージョン管理することで:
-- 変更履歴を追跡できる
-- チームで共有できる (SOUL.md, AGENTS.md, TOOLS.md)
-- 別マシンで同じ設定を再現できる
+`.engram/` ディレクトリ (データベースと設定を含む) は通常 `.gitignore` に入ります:
 
-### USER.md の扱い
-
-`USER.md` には個人情報が含まれる可能性があるため、パブリックリポジトリには含めないことを推奨します。`.gitignore` に追加するか、テンプレートのみを管理します:
-
-```gitignore
-# USER.md は個人情報を含むため除外
-USER.md
-# テンプレートは管理
-!USER.md.template
+```
+.engram/
 ```
 
----
+アイデンティティファイルをトラッキングすることで:
+- AI 設定の進化を時系列で見られる
+- チームメートとベースライン設定を共有できる
+- 何か壊れた場合、前のバージョンにロールバックできる
 
-## engram との連携
+## アイデンティティファイルの更新
 
-アイデンティティファイルは `[vault_knowledge]` が有効な場合、自動的にインデックスされ、検索対象になります。これにより:
+これらのファイルはいつでもテキストエディタで編集できます。変更は即座に有効になります。次に AI ツールがファイルを読むとき、更新されたコンテンツが表示されます。
 
-- `memory_search "行動原則"` で SOUL.md の内容がヒット
-- `memory_brief` が Vault 内のアイデンティティファイルもコンテキストとして参照
+アイデンティティファイルを削除してテンプレートを復元したい場合:
 
-アイデンティティファイルをインデックスから除外したい場合は:
+```python
+from engram.identity import install_identity_files
+from pathlib import Path
 
-```toml
-[vault_knowledge]
-exclude = [
-  "SOUL.md",
-  "USER.md",
-  "AGENTS.md",
-  "TOOLS.md",
-]
+install_identity_files(Path("/path/to/vault"), overwrite=False)
+```
+
+これは存在しないファイルのみ作成します。既存ファイルをデフォルトで置き換えるには `overwrite=True` を渡します。
+
+## アイデンティティファイルの確認
+
+```python
+from engram.identity import check_identity_files
+from pathlib import Path
+
+status = check_identity_files(Path("/path/to/vault"))
+print(status)
+# {'SOUL.md': True, 'USER.md': True, 'AGENTS.md': True, 'TOOLS.md': True, 'CLAUDE.md': True, '_kb/': True}
 ```
 
 ---
+
+## 複数 Vault セットアップ
+
+複数の Vault がある場合 (個人、仕事、プロジェクト専用)、各 Vault が独立したアイデンティティファイルセットを持ちます。これで異なる AI 行動プロファイルを保つことができます:
+
+- **個人 Vault**: カジュアルトーン、広い自律性、個人的文脈
+- **仕事 Vault**: プロフェッショナルトーン、厳格な境界、仕事固有ツール
+- **プロジェクト Vault**: 単一プロジェクトに焦点、そのスタック用の詳細 TOOLS.md
+
+各 Vault は独立した Engram データベースも持つため、検索はそのコンテキストに関連する会話とドキュメントにスコープされます。
 
 ## ヒント
 
-### 段階的にカスタマイズする
-
-最初からすべてを書く必要はありません。テンプレートのままでも動作します。AI とのやり取りの中で「これは毎回伝えている」と気づいたことを順次追加していくのが効果的です。
-
-### 定期的に見直す
-
-プロジェクトの状況や好みは変わります。月に一度程度、各ファイルを見直して最新の状態に保ちましょう。特に `TOOLS.md` の環境情報と `USER.md` の関心事は変わりやすいです。
-
-### チームでの共有
-
-`SOUL.md` と `AGENTS.md` はチーム共有に適しています。チームの AI 利用ガイドラインや、プロジェクト固有のルールを統一できます。`USER.md` は各メンバーが個別に管理します。
-
-### 複数 Vault での使い分け
-
-Vault ごとに異なるアイデンティティファイルを持てます。例えば:
-- 仕事の Vault: フォーマルなトーン、セキュリティ重視
-- 個人の Vault: カジュアルなトーン、実験的な姿勢
-- プロジェクト専用 Vault: 技術的な制約と手順を詳細に記述
+- **小さく始める。** USER.md と TOOLS.md を基本で埋めてください。後で常に追加できます。
+- **決定後に更新。** あなたと AI が重要な決定をしたら、AGENTS.md または専用の決定ログに追加してください。
+- **SOUL.md を短くする。** AI はセッション開始時に読みます。長いファイルはコンテキストウィンドウ領域を消費します。
+- **TOOLS.md に落とし穴を入れる。** 「ステージングサーバーは VPN が必要」または「このリポで `make` ではなく `just` を使う」みたいなことをドキュメント化。毎回時間を節約します。
+- **これらのファイルに秘密を入れないこと。** API キー、パスワード、トークンは禁止。環境変数またはシークレットマネージャーを使う。

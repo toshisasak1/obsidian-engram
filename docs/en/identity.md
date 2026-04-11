@@ -1,8 +1,8 @@
 # Identity Framework
 
-Engram's identity framework is a set of four Markdown files placed in your vault root during `engram init`. They provide persistent context that AI tools read at the start of every session, bridging the gap between sessions where the AI would otherwise start from zero.
+Engram's identity framework is a set of Markdown files placed in your vault root during `engram init`. They provide persistent context that AI tools read at the start of every session, bridging the gap between sessions where the AI would otherwise start from zero.
 
-## The four files
+## The files
 
 | File | Purpose | Audience |
 |------|---------|----------|
@@ -10,6 +10,8 @@ Engram's identity framework is a set of four Markdown files placed in your vault
 | `USER.md` | About you -- your profile for AI context | The AI reads this to know who it is helping |
 | `AGENTS.md` | Session startup checklist | The AI reads this to know what to do first |
 | `TOOLS.md` | Local environment documentation | The AI reads this to know what tools are available |
+| `CLAUDE.md` | Claude Code CLI project instructions | Claude Code reads this via `@import` for KB integration |
+| `_kb/` | Shared knowledge base | Cross-tool knowledge that compounds over time |
 
 These files are templates. They are yours to edit, extend, or replace entirely. Engram provides starting points; you make them useful.
 
@@ -271,13 +273,92 @@ This file documents what tools, scripts, and infrastructure are available on you
 
 Without TOOLS.md, the AI might suggest installing software you already have, use the wrong package manager, or miss custom scripts that would save time. With it, the AI operates within your actual environment.
 
+## CLAUDE.md -- Claude Code integration
+
+This file is specific to Claude Code CLI. It uses `@import` directives to auto-load `AGENTS.md` and `_kb/index.md` at session start, and provides execution instructions for how the AI should use the knowledge base during tasks.
+
+### Default template
+
+The template includes:
+
+- `@AGENTS.md` and `@_kb/index.md` imports (loaded automatically by Claude Code)
+- Navigation instructions for the knowledge base
+- An execution order for tasks (read index, follow links, check decisions, execute, file back)
+- Filing loop rules (write insights back to the vault)
+- Correction loop rules (update files when the user corrects information)
+- Auto-template discovery (check `_kb/templates/` when building new structures)
+
+### Customization
+
+Add your preferred output language, code style, or project-specific execution rules:
+
+```markdown
+## Language
+- Default language: Japanese
+- Code comments and variable names: English
+
+## Output Style
+- Prefer comprehensive analysis over brevity
+- Use headings and tables for structure
+```
+
+## _kb/ -- Shared Knowledge Base
+
+The `_kb/` directory is a cross-tool knowledge base that bridges context between different AI tools (Cowork, Claude Code, Codex CLI, etc.). It follows the Karpathy-style filing loop pattern where each session's output becomes the next session's input.
+
+### Structure
+
+```
+_kb/
+  index.md       # Master index -- auto-rebuilt, lightweight pointers only
+  decisions/     # Strategic decisions and their reasoning
+  sessions/      # Discussion logs from other AI tools
+  templates/     # Reusable patterns for building new structures
+```
+
+### How it works
+
+`index.md` is a lightweight pointer file that lists all active projects, recent decisions, and session logs. AI tools read it at session start and follow links on demand -- they never need to load the entire vault into context.
+
+The three subdirectories serve distinct purposes:
+
+**decisions/** stores records of important choices with their reasoning. When an AI tool encounters a similar decision in the future, it checks here first. Naming convention: `YYYY-MM-DD-topic-slug.md`.
+
+**sessions/** stores cross-tool discussion logs. When you discuss strategy in Cowork and then switch to Claude Code for implementation, the session log bridges the gap. Same naming convention.
+
+**templates/** stores reusable patterns. When an AI tool is asked to build a new structure, it checks here for applicable templates automatically.
+
+### The filing loop (compound interest)
+
+The core principle: every session's work gets written back to the vault. What you don't write back disappears between sessions. What you write back compounds -- the next session starts where the previous one left off.
+
+Both `AGENTS.md` and `CLAUDE.md` include explicit instructions for AI tools to follow this loop:
+1. Read `_kb/index.md` at session start
+2. Execute the task using relevant context
+3. Write back decisions and discoveries to `_kb/decisions/`
+
+### The correction loop (quality assurance)
+
+AI-generated analysis is always a hypothesis. The correction loop prevents errors from persisting in the vault:
+- If the user corrects information, update the file immediately
+- Record what was corrected and why in `_kb/decisions/`
+- Never overwrite existing strategy documents without explicit user approval
+- Items marked with a warning emoji are unverified -- confirm before acting
+
+### Auto-rebuilding index.md
+
+The template `index.md` starts with placeholder comments. You can populate it by:
+- Running `engram brief` which examines your vault structure
+- Setting up a scheduled task (e.g., in Cowork) to rebuild periodically
+- Letting AI tools update it as they discover project structure during tasks
+
 ## Version control
 
 The identity files are designed to be version-controlled:
 
 ```bash
-git add SOUL.md USER.md AGENTS.md TOOLS.md
-git commit -m "Add Engram identity files"
+git add SOUL.md USER.md AGENTS.md TOOLS.md CLAUDE.md _kb/
+git commit -m "Add Engram identity files and knowledge base"
 ```
 
 The `.engram/` directory (containing the database and config) should typically be in `.gitignore`:
@@ -314,7 +395,7 @@ from pathlib import Path
 
 status = check_identity_files(Path("/path/to/vault"))
 print(status)
-# {'SOUL.md': True, 'USER.md': True, 'AGENTS.md': True, 'TOOLS.md': False}
+# {'SOUL.md': True, 'USER.md': True, 'AGENTS.md': True, 'TOOLS.md': False, 'CLAUDE.md': True}
 ```
 
 ## Multi-vault setups

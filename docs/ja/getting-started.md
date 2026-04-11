@@ -66,8 +66,9 @@ engram init
 2. インストール済みの AI ツールを自動検出 (Claude Code, Codex CLI, Gemini CLI)
 3. `.engram/config.toml` を生成
 4. `.engram/engram.db` (SQLite データベース)を作成
-5. アイデンティティテンプレート (`SOUL.md`, `USER.md`, `AGENTS.md`, `TOOLS.md`) を Vault ルートにコピー
-6. 検出されたソースの初回同期を実行
+5. アイデンティティテンプレート (`SOUL.md`, `USER.md`, `AGENTS.md`, `TOOLS.md`, `CLAUDE.md`) を Vault ルートにコピー
+6. ナレッジベース構造 `_kb/` ディレクトリ (`index.md`, `decisions/`, `sessions/`, `templates/` 含む) を作成
+7. 検出されたソースの初回同期を実行
 
 実行例:
 
@@ -76,38 +77,21 @@ $ cd ~/my-vault
 $ engram init
 
 Detected Obsidian vault: /home/you/my-vault
-Discovered AI tool sources: claude, codex, gemini
+Discovered AI tool sources: claude, codex
 
 This will:
   - Create .engram/ directory in /home/you/my-vault
   - Initialize database at /home/you/my-vault/.engram/engram.db
   - Copy template files to /home/you/my-vault
-  - Run initial sync of 3 source(s)
+  - Run initial sync of 2 source(s)
 
-Proceed? [Y/n]: y
+Proceed? [Y/n]
+```
 
-Created /home/you/my-vault/.engram/config.toml
-  Created SOUL.md
-  Created USER.md
-  Created AGENTS.md
-  Created TOOLS.md
+`--yes` (または `-y`) フラグで確認プロンプトをスキップできます:
 
-Initial sync complete: 47 scanned, 32 indexed, 12 skipped, 0 errors
-
---- MCP Registration ---
-Add to your AI tool's MCP config:
-
-  {
-    "mcpServers": {
-      "engram": {
-        "command": "engram",
-        "args": ["mcp"],
-        "env": {}
-      }
-    }
-  }
-
-Done! Run `engram status` to verify.
+```bash
+engram init --yes
 ```
 
 ### スタンドアロンモード (Obsidian なし)
@@ -120,23 +104,46 @@ engram init --no-vault
 
 `--no-vault` を指定すると、アイデンティティテンプレートのコピーがスキップされ、`.engram/` ディレクトリのみが作成されます。
 
-### 確認をスキップして実行
+### スタンドアロンモード (Obsidian なし)
+
+Obsidian なしで Engram を使う場合:
 
 ```bash
-engram init -y
+engram init --no-vault
 ```
 
-`-y` フラグで確認プロンプトをスキップし、デフォルト設定で即座に初期化します。
+`--no-vault` を指定すると、アイデンティティテンプレートとナレッジベース作成がスキップされ、`.engram/` ディレクトリのみが作成されます。
 
 ### 特定の Vault パスを指定
 
 ```bash
-engram init --vault /path/to/my-vault
+engram init --vault /path/to/your/vault
 ```
 
-カレントディレクトリとは別の場所にある Vault を指定できます。
+## 初期化後
 
-## 初回同期 (engram sync)
+Vault に以下が作成されています:
+
+```
+my-vault/
+  .engram/
+    config.toml          # 設定ファイル
+    engram.db            # SQLite データベース
+  _kb/
+    index.md             # プロジェクト横断インデックス
+    decisions/           # 戦略的決定の記録
+    sessions/            # クロスツール discussion ログ
+    templates/           # 再利用可能なテンプレート
+  SOUL.md                # AI アイデンティティガイドライン
+  USER.md                # ユーザープロフィール
+  AGENTS.md              # セッション開始チェックリスト
+  TOOLS.md               # ローカル環境ドキュメント
+  CLAUDE.md              # Claude Code CLI プロジェクト指示
+```
+
+`.engram/` ディレクトリは `.gitignore` に追加してかまいません。アイデンティティファイル (`SOUL.md`, `USER.md`, `AGENTS.md`, `TOOLS.md`, `CLAUDE.md`) と `_kb/` ディレクトリはバージョン管理に含めることを推奨します。
+
+## 同期 (engram sync)
 
 `engram init` の実行時に初回同期は自動で行われますが、手動で再同期するには:
 
@@ -236,6 +243,88 @@ engram search "API設計" --json
 ]
 ```
 
+## 検索 (engram search)
+
+データベースに会話ログが同期されたら、検索を試してみましょう:
+
+```bash
+engram search "デプロイ戦略"
+```
+
+出力例:
+
+```
+--- 1. [claude] API ゲートウェイのデプロイ方法を教えて (score: 0.847) ---
+...Blue/Green デプロイを採用し、ロールバックを即座に行えるように...
+
+--- 2. [codex] Terraform モジュール (score: 0.612) ---
+...ゲートウェイモジュールは重み付けルーティングに対応。deployments 中に...
+```
+
+### 検索オプション
+
+```bash
+# 結果数を指定
+engram search "認証の実装" --limit 5
+
+# ソースを絞り込み
+engram search "バグ修正" --source claude
+
+# JSON 形式で出力
+engram search "API 設計" --json
+```
+
+## データベース状態の確認
+
+```bash
+engram status
+```
+
+出力例:
+
+```
+Database:   /home/you/my-vault/.engram/engram.db
+Vault:      /home/you/my-vault
+Schema:     v1
+Sessions:   142
+Entries:    3847
+FTS rows:   3847
+Embeddings: 0
+Src files:  89
+Sources:
+  claude: 98 sessions
+  codex: 31 sessions
+  vault: 13 sessions
+```
+
+## コンテキストブリーフの生成
+
+`brief` コマンドは最近のセッションのワークスペース対応サマリーを作成します:
+
+```bash
+engram brief
+```
+
+現在のワーキングディレクトリを調べ、`cwd` または `project` が一致するセッションを見つけ、最近のアクティビティとキーワードマッチの Markdown サマリーを出力します。
+
+### 特定のワークスペースを指定
+
+```bash
+engram brief --workspace /path/to/project
+```
+
+### 追加のクエリを指定
+
+```bash
+engram brief -q "マイグレーション" -q "ロールバック計画"
+```
+
+### ファイルに出力
+
+```bash
+engram brief --output context.md
+```
+
 ## 日常的な使い方
 
 ### 継続的な同期 (watch モード)
@@ -296,23 +385,6 @@ engram brief --json
 engram brief -o context.md
 ```
 
-## ディレクトリ構造
-
-初期化後の Vault 構造:
-
-```
-your-vault/
-  .engram/
-    config.toml          # 設定ファイル
-    engram.db            # SQLiteデータベース
-  SOUL.md                # AIアイデンティティ (テンプレート)
-  USER.md                # ユーザープロフィール (テンプレート)
-  AGENTS.md              # セッション開始手順 (テンプレート)
-  TOOLS.md               # 環境ドキュメント (テンプレート)
-```
-
-`.engram/` ディレクトリは `.gitignore` に追加しても問題ありません。アイデンティティファイル (`SOUL.md` 等) はバージョン管理することを推奨します。
-
 ## トラブルシューティング
 
 ### `engram: command not found`
@@ -364,8 +436,8 @@ python -c "import sqlite3; c = sqlite3.connect(':memory:'); c.execute(\"CREATE V
 
 ## 次のステップ
 
-- [設定リファレンス](./configuration.md) -- `config.toml` の全オプション解説
-- [自動タグ付け](./tagging.md) -- キーワードルールまたは AI CLI によるタグ付け
-- [検索アルゴリズム解説](./search.md) -- ハイブリッド検索の仕組み
-- [MCP連携ガイド](./mcp.md) -- AI ツールとの統合方法
-- [アイデンティティフレームワーク](./identity.md) -- SOUL.md 等の活用法
+- **[設定リファレンス](./configuration.md)** -- 検索チューニング、ソース、エンベディングのカスタマイズ
+- **[自動タグ付け](./tagging.md)** -- キーワードルールまたは AI CLI によるタグ付け
+- **[MCP 連携ガイド](./mcp.md)** -- Engram を Claude Code、Codex、またはその他の MCP クライアントに接続
+- **[検索アルゴリズム](./search.md)** -- FTS5、ベクトル検索、RRF フュージョン、タイムディケイがどのように連動するかを理解する
+- **[アイデンティティフレームワーク](./identity.md)** -- SOUL.md、USER.md、AGENTS.md、TOOLS.md を設定する

@@ -6,8 +6,9 @@ _Read this at the beginning of every session._
 
 1. Read `SOUL.md` — your identity and principles
 2. Read `USER.md` — who you're helping
-3. If engram MCP is available, call `memory_brief` for this workspace
-4. Check for `memory/` daily notes if they exist
+3. Read `_kb/index.md` — cross-project knowledge base index. Map of what's active and where details live
+4. If engram MCP is available, call `memory_brief` for this workspace
+5. Check for `memory/` daily notes if they exist
 
 ## Memory Rules
 
@@ -15,6 +16,27 @@ _Read this at the beginning of every session._
 - "Mental notes" don't survive session restarts
 - Use `memory/YYYY-MM-DD.md` for daily activity logs
 - Important decisions and lessons go in dedicated notes
+
+## Knowledge Base (_kb/)
+
+`_kb/index.md` is the master index, auto-rebuilt by engram or your scheduled tasks. Read it every session.
+
+- Follow [[wikilinks]] and file paths in index.md to load documents on demand
+- `_kb/decisions/` — strategic decisions and their reasoning. Check before making similar calls
+- `_kb/sessions/` — discussion logs from other AI tools (Cowork, etc.). Check when continuing a prior conversation
+
+### Filing Loop (compound interest)
+
+Every insight from your work must be written back to the vault (`_kb/decisions/`, project folders, or `memory/`). This is the core principle: **each session's output becomes the next session's input.**
+
+What you don't write back disappears. What you write back compounds.
+
+### Correction Loop (quality assurance)
+
+- If the user negates or corrects information in `_kb/` or the vault, **update the file immediately**
+- Record what was corrected and why in `_kb/decisions/`
+- Items marked with a warning emoji in `_kb/sessions/` are unverified — confirm with the user before acting on them
+- AI-generated analysis is a hypothesis, not fact. Never overwrite existing strategy documents without explicit user approval
 
 ## When in Doubt
 
